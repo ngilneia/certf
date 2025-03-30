@@ -9,7 +9,7 @@ return function ($app) {
     // Homepage route
     $app->get('/', function (Request $request, Response $response, $args) use ($app) {
         $view = $app->getContainer()->get('view');
-        return $view->render($response, 'login.php');
+        return $view->render($response, 'index.php');
     });
 
     // Login route

@@ -20,7 +20,7 @@ return function ($app) {
     });
 
     // Public routes
-    $app->post('/api/auth/login', function (Request $request, Response $response) use ($auth) {
+    $app->post('/api/auth/login.php', function (Request $request, Response $response) use ($auth) {
         try {
             return $auth->login($request, $response)
                 ->withHeader('Access-Control-Allow-Origin', '*')

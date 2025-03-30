@@ -17,13 +17,15 @@ class AuthController
     {
         // Initialize secure session in constructor
         if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
-            ini_set('session.cookie_lifetime', '3600');
-            ini_set('session.gc_maxlifetime', '3600');
+            ini_set('session.cookie_lifetime', '86400'); // 24 hours
+            ini_set('session.gc_maxlifetime', '86400');
             ini_set('session.use_strict_mode', '1');
             ini_set('session.cookie_httponly', '1');
-            ini_set('session.cookie_secure', '1');
-            ini_set('session.cookie_samesite', 'Strict');
+            ini_set('session.cookie_secure', '0'); // Set to 0 for non-HTTPS local development
+            ini_set('session.cookie_samesite', 'Lax'); // Changed to Lax for better compatibility
             ini_set('session.use_only_cookies', '1');
+            ini_set('session.save_handler', 'files');
+            ini_set('session.cache_limiter', 'nocache');
             
             session_start();
             if (!isset($_SESSION['csrf_token'])) {
@@ -73,9 +75,23 @@ class AuthController
                 return $response->withStatus(429);
             }
             
-            // Track login attempts
+            // Track login attempts with IP and email combination
+            $attempts_key = "login_attempts_{$ip}_{$email}";
             if (!isset($_SESSION[$attempts_key])) {
                 $_SESSION[$attempts_key] = ['count' => 0, 'first_attempt' => $timestamp];
+            }
+
+            // Check if account is temporarily locked
+            if (isset($_SESSION[$attempts_key]['count']) && $_SESSION[$attempts_key]['count'] >= 5) {
+                $lockout_time = $_SESSION[$attempts_key]['first_attempt'] + 1800; // 30 minutes lockout
+                if ($timestamp < $lockout_time) {
+                    $wait_time = ceil(($lockout_time - $timestamp) / 60);
+                    $response->getBody()->write(json_encode(['error' => "Account temporarily locked. Please try again in {$wait_time} minutes"]));
+                    return $response->withStatus(429);
+                } else {
+                    // Reset attempts after lockout period
+                    $_SESSION[$attempts_key] = ['count' => 0, 'first_attempt' => $timestamp];
+                }
             }
             
             // Reset attempts if more than 30 minutes have passed
@@ -89,10 +105,23 @@ class AuthController
                 $_SESSION['last_regeneration'] = $timestamp;
             }
             
-            // Session-based authentication only
+            // Input validation and sanitization
             $data = $request->getParsedBody();
             if (!is_array($data)) {
                 $data = json_decode($request->getBody()->getContents(), true) ?? [];
+            }
+
+            // Validate required fields
+            if (!isset($data['email']) || !isset($data['password'])) {
+                $response->getBody()->write(json_encode(['error' => 'Email and password are required']));
+                return $response->withStatus(400);
+            }
+
+            // Sanitize and validate email
+            $email = filter_var($data['email'], FILTER_SANITIZE_EMAIL);
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $response->getBody()->write(json_encode(['error' => 'Invalid email format']));
+                return $response->withStatus(400);
             }
             $response = $response->withHeader('Content-Type', 'application/json');
             $response = $response->withHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -167,8 +196,8 @@ class AuthController
                 
                 session_write_close(); // Ensure session data is written
                 
-                // Determine redirect URL based on role
-                $redirectUrl = $user['role_id'] === 1 ? '/admin/dashboard' : '/dashboard';
+                // Both admin and DEO should be redirected to dashboard
+                $redirectUrl = '/dashboard';
 
                 $response->getBody()->write(json_encode([
                     'user' => [

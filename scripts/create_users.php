@@ -30,26 +30,20 @@ try {
         'status' => 'active'
     ];
 
-    // Insert users
-    $stmt = $db->prepare('INSERT INTO users (username, email, password, role_id, status) VALUES (?, ?, ?, ?, ?)');
+    // Update users' passwords
+    $stmt = $db->prepare('UPDATE users SET password = ? WHERE email = ?');
 
-    // Insert admin
+    // Update admin
     $stmt->execute([
-        $admin['username'],
-        $admin['email'],
         $admin['password'],
-        $admin['role_id'],
-        $admin['status']
+        'admin@admin.com'
     ]);
-    echo "Admin user created successfully!\n";
+    echo "Admin password updated successfully!\n";
 
-    // Insert DEO
+    // Update DEO
     $stmt->execute([
-        $deo['username'],
-        $deo['email'],
         $deo['password'],
-        $deo['role_id'],
-        $deo['status']
+        'deo@deo.com'
     ]);
     echo "DEO user created successfully!\n";
 

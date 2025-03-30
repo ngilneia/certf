@@ -9,15 +9,29 @@ use Psr\Http\Server\RequestHandlerInterface as RequestHandler;
 class AuthMiddleware
 {
     private $rateLimiter = [];
-    private $maxRequests = 180; // Max requests per minute
+    private $maxRequests = 60; // Max requests per minute (reduced for better security)
     private $resetTime = 60; // Reset window in seconds
-    private $registrationMaxRequests = 10; // Max registration attempts per minute
+    private $registrationMaxRequests = 5; // Max registration attempts per minute (reduced)
+    private $loginMaxRequests = 5; // Max login attempts per minute
+    private $sessionTimeout = 1800; // 30 minutes session timeout
 
     public function __invoke(Request $request, RequestHandler $handler): Response
     {
+        // Ensure secure session configuration
+        if (session_status() === PHP_SESSION_NONE) {
+            ini_set('session.cookie_httponly', '1');
+            ini_set('session.use_only_cookies', '1');
+            ini_set('session.cookie_samesite', 'Lax');
+            ini_set('session.use_strict_mode', '1');
+            session_start();
+        }
+
         // Rate limiting
         $clientIp = $request->getServerParams()['REMOTE_ADDR'] ?? '0.0.0.0';
-        if (!$this->checkRateLimit($clientIp)) {
+        $path = $request->getUri()->getPath();
+        $isLogin = strpos($path, '/api/auth/login') !== false;
+
+        if (!$this->checkRateLimit($clientIp, $isLogin)) {
             $response = new \Slim\Psr7\Response();
             $response->getBody()->write(json_encode(['error' => 'Too many requests']));
             return $response->withStatus(429)
@@ -25,11 +39,60 @@ class AuthMiddleware
                 ->withHeader('Retry-After', $this->resetTime);
         }
 
+        // CSRF Protection
+        if ($request->getMethod() === 'POST' || $request->getMethod() === 'PUT' || $request->getMethod() === 'DELETE') {
+            $csrfToken = $request->getHeaderLine('X-CSRF-TOKEN');
+            if (!isset($_SESSION['csrf_token']) || $csrfToken !== $_SESSION['csrf_token']) {
+                $response = new \Slim\Psr7\Response();
+                $response = $response->withStatus(403)
+                    ->withHeader('Content-Type', 'application/json');
+                $response->getBody()->write(json_encode(['error' => 'Invalid CSRF token']));
+                return $response;
+            }
+        }
+
         // Session-based Authentication
         $path = $request->getUri()->getPath();
         
-        // Skip authentication for public routes
-        $publicRoutes = ['/', '/login', '/register', '/api/auth/login', '/api/auth/register', '/css', '/js', '/images', '/assets'];
+        // Skip authentication for public routes and API endpoints
+        $publicRoutes = [
+            '/', '/login', '/register', 
+            '/api/auth/login.php', '/api/auth/register', '/api/auth/check-session.php',
+            '/css', '/js', '/images', '/assets', '/fonts'
+        ];
+        
+        // Protected routes that require authentication
+        $protectedRoutes = [
+            '/admin_applications',
+            '/admin_review',
+            '/application_form',
+            '/applications_list',
+            '/certificate_template',
+            '/certificates_list',
+            '/dashboard',
+            '/verify'
+        ];
+
+        // Check for session timeout
+        if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > 1800)) {
+            unset($_SESSION['user']);
+            unset($_SESSION['last_activity']);
+        }
+        if (isset($_SESSION['user'])) {
+            $_SESSION['last_activity'] = time();
+        }
+        
+        // Check if current path is a protected route
+        foreach ($protectedRoutes as $route) {
+            if (strpos($path, $route) !== false) {
+                if (!isset($_SESSION['user'])) {
+                    $response = new \Slim\Psr7\Response();
+                    return $response->withHeader('Location', '/login')
+                        ->withStatus(302);
+                }
+                break;
+            }
+        }
         
         // Allow access to static assets with any path extension
         $path_parts = explode('/', $path);
@@ -54,7 +117,8 @@ class AuthMiddleware
         if (!in_array($path, $publicRoutes)) {
             if (!isset($_SESSION['user'])) {
                 $response = new \Slim\Psr7\Response();
-                return $response->withHeader('Location', '/login')
+                $returnUrl = urlencode($path);
+                return $response->withHeader('Location', "/login?return_url={$returnUrl}")
                     ->withStatus(302);
             }
             
@@ -79,12 +143,19 @@ class AuthMiddleware
 
 
 
-    private function checkRateLimit(string $clientIp): bool
+    private function checkRateLimit(string $clientIp, bool $isLogin = false): bool
     {
         $now = time();
         $path = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
         $isRegistration = strpos($path, '/api/auth/register') !== false;
-        $maxAllowedRequests = $isRegistration ? $this->registrationMaxRequests : $this->maxRequests;
+        
+        if ($isLogin) {
+            $maxAllowedRequests = $this->loginMaxRequests;
+        } elseif ($isRegistration) {
+            $maxAllowedRequests = $this->registrationMaxRequests;
+        } else {
+            $maxAllowedRequests = $this->maxRequests;
+        }
 
         if (!isset($_SESSION['rate_limiter'][$clientIp])) {
             $_SESSION['rate_limiter'][$clientIp] = [

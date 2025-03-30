@@ -13,6 +13,15 @@ ini_set('display_errors', 1);
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../../../logs/auth.log');
 
+// Set session cookie parameters
+session_set_cookie_params([
+    'lifetime' => 86400, // 24 hours
+    'path' => '/',
+    'secure' => true,
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -80,7 +89,7 @@ try {
             date('Y-m-d H:i:s'),
             $data['email']
         ));
-        throw new Exception('Invalid credentials');
+        throw new Exception('Invalid email or password');
     }
 
     $user = $result->fetch_assoc();
@@ -92,22 +101,15 @@ try {
             date('Y-m-d H:i:s'),
             $data['email']
         ));
-        throw new Exception('Invalid credentials');
+        throw new Exception('Invalid email or password');
     }
 
     // Set session variables
-    $_SESSION['user_id'] = $user['id'];
-    $_SESSION['email'] = $user['email'];
-    $_SESSION['authenticated'] = true;
-    
-    // Set session cookie parameters
-    session_set_cookie_params([
-        'lifetime' => 86400, // 24 hours
-        'path' => '/',
-        'secure' => true,
-        'httponly' => true,
-        'samesite' => 'Strict'
-    ]);
+    $_SESSION['user'] = [
+        'id' => $user['id'],
+        'email' => $user['email']
+    ];
+    $_SESSION['last_activity'] = time();
     
     // Close session write
     session_write_close();
