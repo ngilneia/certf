@@ -1,0 +1,15 @@
+[30-Mar-2025 17:57:17 Europe/Berlin] [2025-03-30 17:57:17] Login attempt - Method: POST, IP: ::1, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+[30-Mar-2025 17:57:17 Europe/Berlin] [2025-03-30 17:57:17] Request payload received - Email: admin@admin.com
+[30-Mar-2025 17:57:17 Europe/Berlin] [2025-03-30 17:57:17] Failed login attempt - Invalid password for email: admin@admin.com
+[30-Mar-2025 17:57:17 Europe/Berlin] [2025-03-30 17:57:17] Authentication error: Invalid credentials
+Stack trace: #0 {main}
+[30-Mar-2025 18:13:39 Europe/Berlin] [2025-03-30 18:13:39] Login attempt - Method: POST, IP: ::1, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+[30-Mar-2025 18:13:39 Europe/Berlin] [2025-03-30 18:13:39] Request payload received - Email: admin@admin.com
+[30-Mar-2025 18:13:39 Europe/Berlin] [2025-03-30 18:13:39] Failed login attempt - Invalid password for email: admin@admin.com
+[30-Mar-2025 18:13:39 Europe/Berlin] [2025-03-30 18:13:39] Authentication error: Invalid credentials
+Stack trace: #0 {main}
+[30-Mar-2025 18:21:57 Europe/Berlin] [2025-03-30 18:21:57] Login attempt - Method: POST, IP: ::1, User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36
+[30-Mar-2025 18:21:57 Europe/Berlin] [2025-03-30 18:21:57] Request payload received - Email: admin@admin.com
+[30-Mar-2025 18:21:57 Europe/Berlin] [2025-03-30 18:21:57] Failed login attempt - Invalid password for email: admin@admin.com
+[30-Mar-2025 18:21:57 Europe/Berlin] [2025-03-30 18:21:57] Authentication error: Invalid credentials
+Stack trace: #0 {main}

@@ -1,0 +1,44 @@
+# Enable URL rewriting
+RewriteEngine On
+
+# Set the base directory
+RewriteBase /
+
+# Allow direct access to API endpoints
+RewriteRule ^api/ - [L]
+
+# Redirect all other requests to index.php except for existing files and directories
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^\.(env|gitignore|htaccess|json)$">
+Order Allow,Deny
+Deny from all
+</FilesMatch>
+
+# Protect application directories
+<FilesMatch "^(src|templates|vendor)/.*$">
+Order Allow,Deny
+Deny from all
+</FilesMatch>
+
+# Allow access to public directory
+<FilesMatch "^public/.*$">
+Order Allow,Deny
+Allow from all
+</FilesMatch>
+
+# Set security headers
+Header set X-Content-Type-Options "nosniff"
+Header set X-Frame-Options "SAMEORIGIN"
+Header set X-XSS-Protection "1; mode=block"
+Header set Referrer-Policy "strict-origin-when-cross-origin"
+
+# Force HTTPS (uncomment in production)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
