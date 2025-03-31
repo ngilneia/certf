@@ -36,11 +36,29 @@ return function ($app) {
         return $view->render($response, 'applications_list.php');
     })->add(new \App\Middleware\AuthMiddleware());
 
-    // Application form route
-    $app->get('/apply', function (Request $request, Response $response, $args) use ($app) {
+    // Application form routes
+    $app->get('/apply/birth_registration', function (Request $request, Response $response, $args) use ($app) {
         $view = $app->getContainer()->get('view');
-        return $view->render($response, 'application_form.php');
+        return $view->render($response, 'birth_registration_form.php');
     })->add(new \App\Middleware\AuthMiddleware());
+
+    $app->get('/apply/death_registration', function (Request $request, Response $response, $args) use ($app) {
+        $view = $app->getContainer()->get('view');
+        return $view->render($response, 'death_registration_form.php');
+    })->add(new \App\Middleware\AuthMiddleware());
+
+    // Routes for specific certificate types
+    $app->get('/apply/delayed_birth_registration', function (Request $request, Response $response, $args) use ($app) {
+        $view = $app->getContainer()->get('view');
+        return $view->render($response, 'birth_registration_form.php');
+    })->add(new \App\Middleware\AuthMiddleware());
+
+    $app->get('/apply/delayed_death_registration', function (Request $request, Response $response, $args) use ($app) {
+        $view = $app->getContainer()->get('view');
+        return $view->render($response, 'death_registration_form.php');
+    })->add(new \App\Middleware\AuthMiddleware());
+
+
 
     // Certificates list route
     $app->get('/certificates', function (Request $request, Response $response, $args) use ($app) {
@@ -52,6 +70,12 @@ return function ($app) {
     $app->get('/admin_review', function (Request $request, Response $response, $args) use ($app) {
         $view = $app->getContainer()->get('view');
         return $view->render($response, 'admin_review.php');
+    })->add(new \App\Middleware\AuthMiddleware());
+
+    // Apply page route
+    $app->get('/apply', function (Request $request, Response $response, $args) use ($app) {
+        $view = $app->getContainer()->get('view');
+        return $view->render($response, 'apply.php');
     })->add(new \App\Middleware\AuthMiddleware());
 
     // Fallback route for undefined routes

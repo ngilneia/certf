@@ -67,6 +67,7 @@ class AuthMiddleware
             '/admin_review',
             '/application_form',
             '/applications_list',
+            '/applications',
             '/certificate_template',
             '/certificates_list',
             '/dashboard',
@@ -83,13 +84,10 @@ class AuthMiddleware
         }
         
         // Check if current path is a protected route
+        $isProtectedRoute = false;
         foreach ($protectedRoutes as $route) {
             if (strpos($path, $route) !== false) {
-                if (!isset($_SESSION['user'])) {
-                    $response = new \Slim\Psr7\Response();
-                    return $response->withHeader('Location', '/login')
-                        ->withStatus(302);
-                }
+                $isProtectedRoute = true;
                 break;
             }
         }
@@ -114,7 +112,7 @@ class AuthMiddleware
             return $handler->handle($request);
         }
 
-        if (!in_array($path, $publicRoutes)) {
+        if ($isProtectedRoute || !in_array($path, $publicRoutes)) {
             if (!isset($_SESSION['user'])) {
                 $response = new \Slim\Psr7\Response();
                 $returnUrl = urlencode($path);

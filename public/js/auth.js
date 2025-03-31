@@ -166,11 +166,11 @@ const Auth = {
                 throw new Error(data.message || 'Login failed');
             }
 
+            // Set flag to prevent immediate auth check
+            sessionStorage.setItem('just_logged_in', 'true');
             this.showNotification('Login successful', 'success');
-            setTimeout(() => {
-                const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : (data.redirect || '/dashboard');
-                window.location.href = redirectUrl;
-            }, 1000);
+            const redirectUrl = returnUrl ? decodeURIComponent(returnUrl) : (data.redirect || '/dashboard');
+            window.location.href = redirectUrl;
 
         } catch (error) {
             this.showNotification(error.message || 'An unexpected error occurred', 'error');
@@ -224,17 +224,46 @@ const Auth = {
      * Check if user is authenticated
      */
     isAuthenticated: function() {
+        // Check cached auth status first
+        if (this._authCache && (Date.now() - this._authCacheTime) < 60000) {
+            return Promise.resolve(this._authCache);
+        }
+
+        // After login, give some time for session to be properly set
+        const justLoggedIn = sessionStorage.getItem('just_logged_in');
+        if (justLoggedIn) {
+            // Keep the flag for a short while to ensure session is properly set
+            setTimeout(() => {
+                sessionStorage.removeItem('just_logged_in');
+            }, 2000);
+            this._authCache = true;
+            this._authCacheTime = Date.now();
+            return Promise.resolve(true);
+        }
+
         const hasSession = document.cookie.includes('PHPSESSID=');
         if (!hasSession) {
-            return false;
+            this._authCache = false;
+            this._authCacheTime = Date.now();
+            return Promise.resolve(false);
         }
+
         // Additional check for session validity
         return fetch('/api/auth/check-session.php', {
             method: 'GET',
             credentials: 'same-origin'
         })
-        .then(response => response.ok)
-        .catch(() => false);
+        .then(response => {
+            const isValid = response.ok;
+            this._authCache = isValid;
+            this._authCacheTime = Date.now();
+            return isValid;
+        })
+        .catch(() => {
+            this._authCache = false;
+            this._authCacheTime = Date.now();
+            return false;
+        });
     },
 
     /**
@@ -257,6 +286,42 @@ const Auth = {
 
         passwordInput.type = type;
         button.querySelector('svg').innerHTML = icon;
+    },
+
+    /**
+     * Check authentication and redirect if not authenticated
+     */
+    requireAuth: async function() {
+        try {
+            // Skip auth check if we just logged in
+            if (sessionStorage.getItem('just_logged_in')) {
+                return;
+            }
+
+            const isAuthenticated = await this.isAuthenticated();
+            if (!isAuthenticated) {
+                const currentPath = window.location.pathname;
+                // Don't redirect if already on login page
+                if (currentPath === '/login') return;
+                
+                // Get the current return_url from URL if it exists
+                const urlParams = new URLSearchParams(window.location.search);
+                const existingReturnUrl = urlParams.get('return_url');
+                
+                // Use existing return_url if available, otherwise use current path
+                const returnUrl = existingReturnUrl || encodeURIComponent(currentPath);
+                
+                // Only redirect if we're not already on the login page with the same return_url
+                const currentUrl = window.location.href;
+                const targetUrl = `/login?return_url=${returnUrl}`;
+                
+                if (currentUrl !== targetUrl) {
+                    window.location.href = targetUrl;
+                }
+            }
+        } catch (error) {
+            console.error('Auth check failed:', error);
+        }
     }
 };
 

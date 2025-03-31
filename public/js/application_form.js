@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             // Populate form fields
-            document.getElementById('certificate_type_id').value = data.certificate_type_id;
             document.getElementById('applicant_name').value = data.applicant_name;
             document.getElementById('applicant_phone').value = data.applicant_phone;
             document.getElementById('applicant_email').value = data.applicant_email;

@@ -11,7 +11,15 @@ return function ($app) {
     $app->group('/api/certificates', function ($group) use ($certificate) {
         // Get available certificate types
         $group->get('/types', function (Request $request, Response $response) use ($certificate) {
-            return $certificate->getAvailableTypes($request, $response);
+            try {
+                // Let the controller handle the Content-Type header
+                return $certificate->getAvailableTypes($request, $response);
+            } catch (\Exception $e) {
+                $response->getBody()->write(json_encode(['error' => 'Failed to fetch certificate types']));
+                return $response
+                    ->withHeader('Content-Type', 'application/json')
+                    ->withStatus(500);
+            }
         });
 
         // Get specific certificate type details

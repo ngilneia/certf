@@ -25,10 +25,21 @@ class CertificateController
 
     public function getAvailableTypes(Request $request, Response $response)
     {
-        $stmt = $this->db->query('SELECT id, name, fee, required_documents FROM certificate_types WHERE status = "active"');
-        $types = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        $response->getBody()->write(json_encode($types));
-        return $response->withHeader('Content-Type', 'application/json');
+        try {
+            $stmt = $this->db->query('SELECT id, name, fee, required_documents FROM certificate_types WHERE status = "active"');
+            $types = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            $response = $response->withHeader('Content-Type', 'application/json');
+            $responseBody = json_encode($types);
+            if ($responseBody === false) {
+                throw new \Exception('Failed to encode response as JSON');
+            }
+            $response->getBody()->write($responseBody);
+            return $response;
+        } catch (\Exception $e) {
+            $response = $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+            $response->getBody()->write(json_encode(['error' => 'Failed to fetch certificate types']));
+            return $response;
+        }
     }
 
     public function getCertificateType(Request $request, Response $response, array $args)

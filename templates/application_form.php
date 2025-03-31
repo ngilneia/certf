@@ -34,15 +34,9 @@
                 <form id="certificateForm" class="space-y-6" method="POST" action="/api/certificates/apply" enctype="multipart/form-data">
                     <!-- CSRF Token -->
                     <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
-                    <!-- Certificate Type Selection -->
-                    <div class="mb-6">
-                        <label for="certificate_type_id" class="block text-sm font-medium text-gray-700 mb-1">Certificate Type</label>
-                        <select id="certificate_type_id" name="certificate_type_id" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" required>
-                            <option value="">Select Certificate Type</option>
-                            <!-- Certificate types will be populated via JavaScript -->
-                        </select>
-                        <p class="mt-2 text-sm text-gray-500">Fee: <span id="certificate_fee">₹0</span></p>
-                    </div>
+                    <!-- Hidden Certificate Type ID -->
+                    <input type="hidden" name="certificate_type_id" value="<?php echo $certificate_types[0]['id']; ?>">
+
 
                     <!-- Basic Applicant Information -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -171,21 +165,15 @@
     <!-- JavaScript for Form Handling -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Fetch certificate types
-            fetch('/api/certificates/types')
-                .then(response => response.json())
-                .then(data => {
-                    const selectElement = document.getElementById('certificate_type_id');
-                    data.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type.id;
-                        option.textContent = `${type.name} (₹${type.fee})`;
-                        option.dataset.fee = type.fee;
-                        option.dataset.documents = type.required_documents;
-                        selectElement.appendChild(option);
-                    });
-                })
-                .catch(error => console.error('Error fetching certificate types:', error));
+            // Certificate types are already populated via PHP
+            const selectElement = document.getElementById('certificate_type_id');
+            Array.from(selectElement.options).forEach(option => {
+                if (option.value) {
+                    const typeData = JSON.parse(option.dataset.typeInfo || '{}');
+                    option.dataset.fee = typeData.fee;
+                    option.dataset.documents = typeData.required_documents;
+                }
+            });
 
             // Handle certificate type selection
             document.getElementById('certificate_type_id').addEventListener('change', function() {
